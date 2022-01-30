@@ -21,7 +21,6 @@ import coil.request.ImageRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import net.vonforst.evmap.*
 import net.vonforst.evmap.api.availability.ChargeLocationStatus
 import net.vonforst.evmap.api.availability.getAvailability
@@ -32,12 +31,12 @@ import net.vonforst.evmap.api.stringProvider
 import net.vonforst.evmap.model.ChargeLocation
 import net.vonforst.evmap.model.Favorite
 import net.vonforst.evmap.storage.AppDatabase
+import net.vonforst.evmap.storage.ChargeLocationsRepository
 import net.vonforst.evmap.storage.PreferenceDataSource
 import net.vonforst.evmap.ui.ChargerIconGenerator
 import net.vonforst.evmap.ui.availabilityText
 import net.vonforst.evmap.ui.getMarkerTint
 import net.vonforst.evmap.viewmodel.Status
-import net.vonforst.evmap.viewmodel.getReferenceData
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -53,7 +52,7 @@ class ChargerDetailScreen(ctx: CarContext, val chargerSparse: ChargeLocation) : 
     private val api by lazy {
         createApi(prefs.dataSource, ctx)
     }
-    private val referenceData = api.getReferenceData(lifecycleScope, carContext)
+    private val repo = ChargeLocationsRepository(api, lifecycleScope, db, prefs)
 
     private val imageSize = 128  // images should be 128dp according to docs
     private val imageHeightLarge = 480  // images should be 480 x 854 dp according to docs
@@ -72,9 +71,7 @@ class ChargerDetailScreen(ctx: CarContext, val chargerSparse: ChargeLocation) : 
     private var favoriteUpdateJob: Job? = null
 
     init {
-        referenceData.observe(this) {
-            loadCharger()
-        }
+        loadCharger()
     }
 
     override fun onGetTemplate(): Template {
@@ -354,60 +351,60 @@ class ChargerDetailScreen(ctx: CarContext, val chargerSparse: ChargeLocation) : 
     }
 
     private fun loadCharger() {
-        val referenceData = referenceData.value ?: return
         lifecycleScope.launch {
             favorite = db.favoritesDao().findFavorite(chargerSparse.id, chargerSparse.dataSource)
-
-            val response = api.getChargepointDetail(referenceData, chargerSparse.id)
+        }
+        val charger = repo.getChargepointDetail(chargerSparse.id)
+        charger.observe(this) { response ->
             if (response.status == Status.SUCCESS) {
                 val charger = response.data!!
 
-                val photo = charger.photos?.firstOrNull()
-                photo?.let {
-                    val density = carContext.resources.displayMetrics.density
-                    val url = if (largeImageSupported) {
-                        photo.getUrl(
-                            width = (imageWidthLarge * density).roundToInt(),
-                            height = (imageHeightLarge * density).roundToInt()
+                lifecycleScope.launch {
+                    val photo = charger.photos?.firstOrNull()
+                    photo?.let {
+                        val density = carContext.resources.displayMetrics.density
+                        val url = if (largeImageSupported) {
+                            photo.getUrl(
+                                width = (imageWidthLarge * density).roundToInt(),
+                                height = (imageHeightLarge * density).roundToInt()
+                            )
+                        } else {
+                            photo.getUrl(size = (imageSize * density).roundToInt())
+                        }
+                        val request = ImageRequest.Builder(carContext).data(url).build()
+                        var img =
+                            (carContext.imageLoader.execute(request).drawable as BitmapDrawable).bitmap
+
+                        // draw icon on top of image
+                        val icon = iconGen.getBitmap(
+                            tint = getMarkerTint(charger),
+                            fault = charger.faultReport != null,
+                            multi = charger.isMulti()
                         )
-                    } else {
-                        photo.getUrl(size = (imageSize * density).roundToInt())
+
+                        img = img.copy(Bitmap.Config.ARGB_8888, true)
+                        val iconSmall = icon.scale(
+                            (img.height * 0.4 / icon.height * icon.width).roundToInt(),
+                            (img.height * 0.4).roundToInt()
+                        )
+                        val canvas = Canvas(img)
+                        canvas.drawBitmap(
+                            iconSmall,
+                            0f,
+                            (img.height - iconSmall.height * 1.1).toFloat(),
+                            null
+                        )
+                        this@ChargerDetailScreen.photo = img
                     }
-                    val request = ImageRequest.Builder(carContext).data(url).build()
-                    var img =
-                        (carContext.imageLoader.execute(request).drawable as BitmapDrawable).bitmap
+                    this@ChargerDetailScreen.charger = charger
 
-                    // draw icon on top of image
-                    val icon = iconGen.getBitmap(
-                        tint = getMarkerTint(charger),
-                        fault = charger.faultReport != null,
-                        multi = charger.isMulti()
-                    )
+                    availability = getAvailability(charger).data
 
-                    img = img.copy(Bitmap.Config.ARGB_8888, true)
-                    val iconSmall = icon.scale(
-                        (img.height * 0.4 / icon.height * icon.width).roundToInt(),
-                        (img.height * 0.4).roundToInt()
-                    )
-                    val canvas = Canvas(img)
-                    canvas.drawBitmap(
-                        iconSmall,
-                        0f,
-                        (img.height - iconSmall.height * 1.1).toFloat(),
-                        null
-                    )
-                    this@ChargerDetailScreen.photo = img
+                    invalidate()
                 }
-                this@ChargerDetailScreen.charger = charger
-
-                availability = getAvailability(charger).data
-
-                invalidate()
             } else {
-                withContext(Dispatchers.Main) {
-                    CarToast.makeText(carContext, R.string.connection_error, CarToast.LENGTH_LONG)
-                        .show()
-                }
+                CarToast.makeText(carContext, R.string.connection_error, CarToast.LENGTH_LONG)
+                    .show()
             }
         }
     }

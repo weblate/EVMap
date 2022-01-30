@@ -129,6 +129,8 @@ class GoingElectricApiWrapper(
 
     override fun getName() = "GoingElectric.de"
 
+    override fun getId() = "going_electric"
+
     override suspend fun getChargepoints(
         referenceData: ReferenceData,
         bounds: LatLngBounds,

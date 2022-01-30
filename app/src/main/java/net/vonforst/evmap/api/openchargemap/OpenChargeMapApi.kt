@@ -109,6 +109,8 @@ class OpenChargeMapApiWrapper(
 
     override fun getName() = "OpenChargeMap.org"
 
+    override fun getId() = "open_charge_map"
+
     private fun formatMultipleChoice(value: MultipleChoiceFilterValue?) =
         if (value == null || value.all) null else value.values.joinToString(",")
 

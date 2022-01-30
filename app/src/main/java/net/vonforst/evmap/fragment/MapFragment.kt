@@ -23,7 +23,10 @@ import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.widget.PopupMenu
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.core.view.*
+import androidx.core.view.MenuCompat
+import androidx.core.view.doOnLayout
+import androidx.core.view.doOnNextLayout
+import androidx.core.view.updateLayoutParams
 import androidx.databinding.DataBindingUtil
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
@@ -75,8 +78,6 @@ import net.vonforst.evmap.adapter.ConnectorAdapter
 import net.vonforst.evmap.adapter.DetailsAdapter
 import net.vonforst.evmap.adapter.GalleryAdapter
 import net.vonforst.evmap.adapter.PlaceAutocompleteAdapter
-import net.vonforst.evmap.api.goingelectric.GoingElectricApiWrapper
-import net.vonforst.evmap.api.openchargemap.OpenChargeMapApiWrapper
 import net.vonforst.evmap.autocomplete.ApiUnavailableException
 import net.vonforst.evmap.autocomplete.PlaceWithBounds
 import net.vonforst.evmap.databinding.FragmentMapBinding
@@ -92,6 +93,28 @@ import net.vonforst.evmap.utils.checkFineLocationPermission
 import net.vonforst.evmap.utils.distanceBetween
 import net.vonforst.evmap.viewmodel.*
 import java.io.IOException
+import kotlin.collections.List
+import kotlin.collections.Set
+import kotlin.collections.any
+import kotlin.collections.component1
+import kotlin.collections.component2
+import kotlin.collections.contains
+import kotlin.collections.emptyList
+import kotlin.collections.filterIsInstance
+import kotlin.collections.find
+import kotlin.collections.forEach
+import kotlin.collections.getOrNull
+import kotlin.collections.isNotEmpty
+import kotlin.collections.iterator
+import kotlin.collections.listOf
+import kotlin.collections.map
+import kotlin.collections.mapNotNull
+import kotlin.collections.set
+import kotlin.collections.sortedBy
+import kotlin.collections.sortedByDescending
+import kotlin.collections.toList
+import kotlin.collections.toSet
+import kotlin.collections.toTypedArray
 
 
 class MapFragment : Fragment(), OnMapReadyCallback, MapsActivity.FragmentCallback,
@@ -347,16 +370,11 @@ class MapFragment : Fragment(), OnMapReadyCallback, MapsActivity.FragmentCallbac
         }
         binding.detailView.btnChargeprice.setOnClickListener {
             val charger = vm.charger.value?.data ?: return@setOnClickListener
-            val dataSource = when (vm.apiType) {
-                GoingElectricApiWrapper::class.java -> "going_electric"
-                OpenChargeMapApiWrapper::class.java -> "open_charge_map"
-                else -> throw IllegalArgumentException("unsupported data source")
-            }
             val extras =
                 FragmentNavigatorExtras(binding.detailView.btnChargeprice to getString(R.string.shared_element_chargeprice))
             findNavController().navigate(
                 R.id.action_map_to_chargepriceFragment,
-                ChargepriceFragmentArgs(charger, dataSource).toBundle(),
+                ChargepriceFragmentArgs(charger, vm.apiId).toBundle(),
                 null, extras
             )
         }
@@ -384,7 +402,7 @@ class MapFragment : Fragment(), OnMapReadyCallback, MapsActivity.FragmentCallbac
                     val charger = vm.charger.value?.data
                     if (charger?.editUrl != null) {
                         (activity as? MapsActivity)?.openUrl(charger.editUrl)
-                        if (vm.apiType == GoingElectricApiWrapper::class.java) {
+                        if (vm.apiId == "going_electric") {
                             // instructions specific to GoingElectric
                             Toast.makeText(
                                 requireContext(),
