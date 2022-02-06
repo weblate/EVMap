@@ -5,11 +5,11 @@ import android.content.ContentValues
 import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import androidx.room.Database
-import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import co.anbora.labs.spatia.builder.SpatiaRoom
 import net.vonforst.evmap.api.goingelectric.GEChargeCard
 import net.vonforst.evmap.api.goingelectric.GEChargepoint
 import net.vonforst.evmap.api.openchargemap.OCMConnectionType
@@ -51,7 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         private lateinit var context: Context
         private val database: AppDatabase by lazy(LazyThreadSafetyMode.SYNCHRONIZED) {
-            Room.databaseBuilder(context, AppDatabase::class.java, "evmap.db")
+            SpatiaRoom.databaseBuilder(context, AppDatabase::class.java, "evmap.db")
                 .addMigrations(
                     MIGRATION_2, MIGRATION_3, MIGRATION_4, MIGRATION_5, MIGRATION_6,
                     MIGRATION_7, MIGRATION_8, MIGRATION_9, MIGRATION_10, MIGRATION_11,
