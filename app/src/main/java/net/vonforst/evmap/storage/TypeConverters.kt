@@ -12,6 +12,9 @@ import net.vonforst.evmap.autocomplete.AutocompletePlaceType
 import net.vonforst.evmap.model.ChargeCardId
 import net.vonforst.evmap.model.Chargepoint
 import net.vonforst.evmap.model.ChargerPhoto
+import net.vonforst.evmap.model.Coordinate
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.time.Instant
 import java.time.LocalTime
 
@@ -153,5 +156,42 @@ class Converters {
     @TypeConverter
     fun toAutocompletePlaceTypeList(value: String): List<AutocompletePlaceType> {
         return value.split(",").map { AutocompletePlaceType.valueOf(it) }
+    }
+
+    @TypeConverter
+    fun toCoordinate(bytes: ByteArray): Coordinate {
+        val byteOrder = when (bytes[1]) {
+            1.toByte() -> ByteOrder.LITTLE_ENDIAN
+            0.toByte() -> ByteOrder.BIG_ENDIAN
+            else -> {
+                // TinyPoint format https://www.gaia-gis.it/gaia-sins/BLOB-TinyPoint.html
+                // (not supported by our current Spatialite version 4.3)
+                throw NotImplementedError()
+            }
+        }
+        val buffer = ByteBuffer.wrap(bytes).order(byteOrder)
+
+        assert(buffer.getInt(39) == 1)   // is point
+        assert(buffer.getInt(2) == 4326) // is WGS84
+
+        return Coordinate(buffer.getDouble(43), buffer.getDouble(51))
+    }
+
+    @TypeConverter
+    fun fromCoordinate(point: Coordinate): ByteArray {
+        val buffer = ByteBuffer.allocate(60).order(ByteOrder.LITTLE_ENDIAN)
+        buffer.put(0x00)  // start
+            .put(0x01)  // byte order
+            .putInt(4326)  // WGS84
+            .putDouble(point.lat)  // min x
+            .putDouble(point.lng)  // min y
+            .putDouble(point.lat)  // max x
+            .putDouble(point.lng)  // max y
+            .put(0x7c)  // mbr_end
+            .putInt(1) // point
+            .putDouble(point.lat)  // x
+            .putDouble(point.lng)  // y
+            .put((0xfe).toByte())  // end
+        return buffer.array()
     }
 }
