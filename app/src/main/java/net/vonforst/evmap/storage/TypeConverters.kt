@@ -174,7 +174,7 @@ class Converters {
         assert(buffer.getInt(39) == 1)   // is point
         assert(buffer.getInt(2) == 4326) // is WGS84
 
-        return Coordinate(buffer.getDouble(43), buffer.getDouble(51))
+        return Coordinate(buffer.getDouble(51), buffer.getDouble(43))
     }
 
     @TypeConverter
@@ -183,14 +183,14 @@ class Converters {
         buffer.put(0x00)  // start
             .put(0x01)  // byte order
             .putInt(4326)  // WGS84
-            .putDouble(point.lat)  // min x
-            .putDouble(point.lng)  // min y
-            .putDouble(point.lat)  // max x
-            .putDouble(point.lng)  // max y
+            .putDouble(point.lng)  // min x
+            .putDouble(point.lat)  // min y
+            .putDouble(point.lng)  // max x
+            .putDouble(point.lat)  // max y
             .put(0x7c)  // mbr_end
             .putInt(1) // point
-            .putDouble(point.lat)  // x
-            .putDouble(point.lng)  // y
+            .putDouble(point.lng)  // x
+            .putDouble(point.lat)  // y
             .put((0xfe).toByte())  // end
         return buffer.array()
     }

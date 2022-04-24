@@ -34,7 +34,7 @@ interface ChargeLocationsDao {
     fun getChargeLocationById(id: Long, dataSource: String): LiveData<ChargeLocation>
 
     @SkipQueryVerification
-    @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lng2, :lat1, :lat2))")
+    @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lat1, :lng2, :lat2))")
     fun getChargeLocationsInBounds(
         lat1: Double,
         lat2: Double,
@@ -44,7 +44,7 @@ interface ChargeLocationsDao {
     ): LiveData<List<ChargeLocation>>
 
     @SkipQueryVerification
-    @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lng2, :lat1, :lat2))")
+    @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lat1, :lng2, :lat2))")
     suspend fun getChargeLocationsInBoundsAsync(
         lat1: Double,
         lat2: Double,
