@@ -5,6 +5,8 @@ import androidx.lifecycle.MediatorLiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.Transformations
 import androidx.room.*
+import androidx.sqlite.db.SimpleSQLiteQuery
+import androidx.sqlite.db.SupportSQLiteQuery
 import com.car2go.maps.model.LatLng
 import com.car2go.maps.model.LatLngBounds
 import com.car2go.maps.util.SphericalUtil
@@ -14,7 +16,10 @@ import net.vonforst.evmap.api.ChargepointApi
 import net.vonforst.evmap.api.StringProvider
 import net.vonforst.evmap.api.goingelectric.GoingElectricApiWrapper
 import net.vonforst.evmap.api.openchargemap.OpenChargeMapApiWrapper
-import net.vonforst.evmap.model.*
+import net.vonforst.evmap.model.ChargeLocation
+import net.vonforst.evmap.model.ChargepointListItem
+import net.vonforst.evmap.model.FilterValues
+import net.vonforst.evmap.model.ReferenceData
 import net.vonforst.evmap.viewmodel.Resource
 import net.vonforst.evmap.viewmodel.Status
 import kotlin.math.sqrt
@@ -43,15 +48,8 @@ interface ChargeLocationsDao {
         dataSource: String
     ): LiveData<List<ChargeLocation>>
 
-    @SkipQueryVerification
-    @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lat1, :lng2, :lat2))")
-    suspend fun getChargeLocationsInBoundsAsync(
-        lat1: Double,
-        lat2: Double,
-        lng1: Double,
-        lng2: Double,
-        dataSource: String
-    ): List<ChargeLocation>
+    @RawQuery(observedEntities = [ChargeLocation::class])
+    fun getChargeLocationsCustom(query: SupportSQLiteQuery): LiveData<List<ChargeLocation>>
 }
 
 /**
@@ -89,29 +87,71 @@ class ChargeLocationsRepository(
     }
     private val chargeLocationsDao = db.chargeLocationsDao()
 
+    private fun queryWithFilters(
+        api: ChargepointApi<ReferenceData>,
+        filters: FilterValues,
+        bounds: LatLngBounds
+    ) = try {
+        val query = api.convertFiltersToSQL(filters)
+        val sql = StringBuilder().apply {
+            append("SELECT")
+            if (query.requiresChargeCardQuery or query.requiresChargepointQuery) {
+                append(" DISTINCT chargelocation.*")
+            } else {
+                append(" *")
+            }
+            append(" FROM chargelocation")
+            if (query.requiresChargepointQuery) {
+                append(" JOIN json_each(chargelocation.chargepoints) AS cp")
+            }
+            if (query.requiresChargeCardQuery) {
+                append(" JOIN json_each(chargelocation.chargecards) AS cc")
+            }
+            append(" WHERE dataSource == '${prefs.dataSource}'")
+            append(" AND Within(coordinates, BuildMbr(${bounds.southwest.longitude}, ${bounds.southwest.latitude}, ${bounds.northeast.longitude}, ${bounds.northeast.latitude})) ")
+            append(query.query)
+        }.toString()
+
+        chargeLocationsDao.getChargeLocationsCustom(
+            SimpleSQLiteQuery(
+                sql,
+                null
+            )
+        ) as LiveData<List<ChargepointListItem>>
+    } catch (e: NotImplementedError) {
+        MutableLiveData()  // in this case we cannot get a DB result
+    }
+
     fun getChargepoints(
         bounds: LatLngBounds,
         zoom: Float,
         filters: FilterValues?
     ): LiveData<Resource<List<ChargepointListItem>>> {
-        val dbResult = chargeLocationsDao.getChargeLocationsInBounds(
-            bounds.southwest.latitude,
-            bounds.northeast.latitude,
-            bounds.southwest.longitude,
-            bounds.northeast.longitude,
-            prefs.dataSource
-        ) as LiveData<List<ChargepointListItem>>
+        val api = api.value!!
+
+        val dbResult = if (filters == null) {
+            chargeLocationsDao.getChargeLocationsInBounds(
+                bounds.southwest.latitude,
+                bounds.northeast.latitude,
+                bounds.southwest.longitude,
+                bounds.northeast.longitude,
+                prefs.dataSource
+            ) as LiveData<List<ChargepointListItem>>
+        } else {
+            queryWithFilters(api, filters, bounds)
+        }
         val apiResult = MediatorLiveData<Resource<List<ChargepointListItem>>>().apply {
             addSource(referenceData) {
                 scope.launch {
-                    val result = api.value!!.getChargepoints(it, bounds, zoom, filters)
-                    value = result
+                    val result = api.getChargepoints(it, bounds, zoom, filters)
                     if (result.status == Status.SUCCESS) {
+                        // TODO: do not override existing data with more details
                         chargeLocationsDao.insert(
                             *result.data!!.filterIsInstance(ChargeLocation::class.java)
                                 .toTypedArray()
                         )
                     }
+                    value = result
                 }
             }
         }
@@ -135,14 +175,16 @@ class ChargeLocationsRepository(
             bounds.northeast.latitude,
             bounds.southwest.longitude,
             bounds.northeast.longitude,
-            prefs.dataSource
-        ) as LiveData<List<ChargepointListItem>>
+            prefs.dataSource,
+
+            ) as LiveData<List<ChargepointListItem>>
         val apiResult = MediatorLiveData<Resource<List<ChargepointListItem>>>().apply {
             addSource(referenceData) {
                 scope.launch {
                     val result = api.value!!.getChargepoints(it, bounds, zoom, filters)
                     value = result
                     if (result.status == Status.SUCCESS) {
+                        // TODO: do not override existing data with more details
                         chargeLocationsDao.insert(
                             *result.data!!.filterIsInstance(ChargeLocation::class.java)
                                 .toTypedArray()
@@ -172,9 +214,7 @@ class ChargeLocationsRepository(
         return CacheLiveData(dbResult, apiResult)
     }
 
-    fun getFilters(sp: StringProvider) = MediatorLiveData<List<Filter<FilterValue>>>().apply {
-        addSource(referenceData) { data ->
-            value = api.value!!.getFilters(data, sp)
-        }
+    fun getFilters(sp: StringProvider) = Transformations.map(referenceData) { data ->
+        api.value!!.getFilters(data, sp)
     }
 }

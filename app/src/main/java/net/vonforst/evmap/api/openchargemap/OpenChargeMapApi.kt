@@ -326,4 +326,9 @@ class OpenChargeMapApiWrapper(
         )
     }
 
+    override fun convertFiltersToSQL(filters: FilterValues): FiltersSQLQuery {
+        //if (filters.isEmpty())
+        return FiltersSQLQuery("", false, false)
+    }
+
 }
