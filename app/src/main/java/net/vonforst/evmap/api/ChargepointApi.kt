@@ -34,8 +34,8 @@ interface ChargepointApi<out T : ReferenceData> {
 
     fun getFilters(referenceData: ReferenceData, sp: StringProvider): List<Filter<FilterValue>>
 
-    fun getName(): String
-    fun getId(): String
+    val name: String
+    val id: String
 }
 
 interface StringProvider {

@@ -177,6 +177,4 @@ class ChargeLocationsRepository(
             value = api.value!!.getFilters(data, sp)
         }
     }
-
-    fun getName(): String = api.value!!.getName()
 }

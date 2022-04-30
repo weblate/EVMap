@@ -107,9 +107,8 @@ class OpenChargeMapApiWrapper(
 ) : ChargepointApi<OCMReferenceData> {
     val api = OpenChargeMapApi.create(apikey, baseurl, context)
 
-    override fun getName() = "OpenChargeMap.org"
-
-    override fun getId() = "open_charge_map"
+    override val name = "OpenChargeMap.org"
+    override val id = "open_charge_map"
 
     private fun formatMultipleChoice(value: MultipleChoiceFilterValue?) =
         if (value == null || value.all) null else value.values.joinToString(",")

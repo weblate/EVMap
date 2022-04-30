@@ -41,9 +41,9 @@ internal fun getClusterDistance(zoom: Float): Int? {
 class MapViewModel(application: Application, private val state: SavedStateHandle) :
     AndroidViewModel(application) {
     val apiId: String
-        get() = repo.api.value!!.getId()
+        get() = repo.api.value!!.id
     val apiName: String
-        get() = repo.api.value!!.getName()
+        get() = repo.api.value!!.name
 
     private val db = AppDatabase.getInstance(application)
     private val prefs = PreferenceDataSource(application)
@@ -248,7 +248,7 @@ class MapViewModel(application: Application, private val state: SavedStateHandle
 
     fun reloadPrefs() {
         filterStatus.value = prefs.filterStatus
-        if (prefs.dataSource != repo.api.value!!.getId()) {
+        if (prefs.dataSource != apiId) {
             repo.api.value = createApi(prefs.dataSource, getApplication())
         }
     }
