@@ -65,7 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
                         db.execSQL("INSERT INTO `FilterProfile` (`dataSource`, `name`, `id`, `order`) VALUES ('openchargemap', 'FILTERS_CUSTOM', $FILTERS_CUSTOM, 0)")
                         // initialize spatialite columns
                         db.query("SELECT InitSpatialMetaData();").moveToNext()
-                        db.query("SELECT AddGeometryColumn('ChargeLocation', 'coordinates', 4326, 'POINT', 'XY');")
+                        db.query("SELECT RecoverGeometryColumn('ChargeLocation', 'coordinates', 4326, 'POINT', 'XY');")
                             .moveToNext()
                         db.query("SELECT CreateSpatialIndex('ChargeLocation', 'coordinates');")
                             .moveToNext()
