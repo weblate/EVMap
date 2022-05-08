@@ -173,24 +173,29 @@ class ChargeLocationsRepository(
         zoom: Float,
         filters: FilterValues?
     ): LiveData<Resource<List<ChargepointListItem>>> {
+        val api = api.value!!
+
         // database does not support radius queries, so let's build a square query instead
         val cornerDistance = radius * sqrt(2.0)
         val southwest = SphericalUtil.computeOffset(location, cornerDistance, 225.0)
         val northeast = SphericalUtil.computeOffset(location, cornerDistance, 45.0)
         val bounds = LatLngBounds(southwest, northeast)
 
-        val dbResult = chargeLocationsDao.getChargeLocationsInBounds(
-            bounds.southwest.latitude,
-            bounds.northeast.latitude,
-            bounds.southwest.longitude,
-            bounds.northeast.longitude,
-            prefs.dataSource,
-
+        val dbResult = if (filters == null) {
+            chargeLocationsDao.getChargeLocationsInBounds(
+                bounds.southwest.latitude,
+                bounds.northeast.latitude,
+                bounds.southwest.longitude,
+                bounds.northeast.longitude,
+                prefs.dataSource,
             ) as LiveData<List<ChargepointListItem>>
+        } else {
+            queryWithFilters(api, filters, bounds)
+        }
         val apiResult = MediatorLiveData<Resource<List<ChargepointListItem>>>().apply {
             addSource(referenceData) {
                 scope.launch {
-                    val result = api.value!!.getChargepoints(it, bounds, zoom, filters)
+                    val result = api.getChargepointsRadius(it, location, radius, zoom, filters)
                     value = result
                     if (result.status == Status.SUCCESS) {
                         chargeLocationsDao.insertOrReplaceIfNoDetailedExists(
