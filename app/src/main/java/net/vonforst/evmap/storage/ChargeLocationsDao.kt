@@ -25,22 +25,32 @@ import net.vonforst.evmap.viewmodel.Status
 import kotlin.math.sqrt
 
 @Dao
-interface ChargeLocationsDao {
+abstract class ChargeLocationsDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insert(vararg locations: ChargeLocation)
+    abstract suspend fun insert(vararg locations: ChargeLocation)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    fun insertBlocking(vararg locations: ChargeLocation)
+    // TODO: add max age here
+    @Query("SELECT EXISTS(SELECT 1 FROM chargelocation WHERE dataSource == :dataSource AND id == :id AND isDetailed == 1)")
+    abstract suspend fun checkExistsDetailed(id: Long, dataSource: String): Boolean
+
+    suspend fun insertOrReplaceIfNoDetailedExists(vararg locations: ChargeLocation) {
+        locations.forEach {
+            if (it.isDetailed || !checkExistsDetailed(it.id, it.dataSource)) {
+                insert(it)
+            }
+        }
+    }
 
     @Delete
-    suspend fun delete(vararg locations: ChargeLocation)
+    abstract suspend fun delete(vararg locations: ChargeLocation)
 
+    // TODO: add max age here
     @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND id == :id AND isDetailed == 1")
-    fun getChargeLocationById(id: Long, dataSource: String): LiveData<ChargeLocation>
+    abstract fun getChargeLocationById(id: Long, dataSource: String): LiveData<ChargeLocation>
 
     @SkipQueryVerification
     @Query("SELECT * FROM chargelocation WHERE dataSource == :dataSource AND Within(coordinates, BuildMbr(:lng1, :lat1, :lng2, :lat2))")
-    fun getChargeLocationsInBounds(
+    abstract fun getChargeLocationsInBounds(
         lat1: Double,
         lat2: Double,
         lng1: Double,
@@ -49,7 +59,7 @@ interface ChargeLocationsDao {
     ): LiveData<List<ChargeLocation>>
 
     @RawQuery(observedEntities = [ChargeLocation::class])
-    fun getChargeLocationsCustom(query: SupportSQLiteQuery): LiveData<List<ChargeLocation>>
+    abstract fun getChargeLocationsCustom(query: SupportSQLiteQuery): LiveData<List<ChargeLocation>>
 }
 
 /**
@@ -145,8 +155,7 @@ class ChargeLocationsRepository(
                 scope.launch {
                     val result = api.getChargepoints(it, bounds, zoom, filters)
                     if (result.status == Status.SUCCESS) {
-                        // TODO: do not override existing data with more details
-                        chargeLocationsDao.insert(
+                        chargeLocationsDao.insertOrReplaceIfNoDetailedExists(
                             *result.data!!.filterIsInstance(ChargeLocation::class.java)
                                 .toTypedArray()
                         )
@@ -184,8 +193,7 @@ class ChargeLocationsRepository(
                     val result = api.value!!.getChargepoints(it, bounds, zoom, filters)
                     value = result
                     if (result.status == Status.SUCCESS) {
-                        // TODO: do not override existing data with more details
-                        chargeLocationsDao.insert(
+                        chargeLocationsDao.insertOrReplaceIfNoDetailedExists(
                             *result.data!!.filterIsInstance(ChargeLocation::class.java)
                                 .toTypedArray()
                         )
