@@ -10,6 +10,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import co.anbora.labs.spatia.builder.SpatiaRoom
+import co.anbora.labs.spatia.geometry.GeometryConverters
 import net.vonforst.evmap.api.goingelectric.GEChargeCard
 import net.vonforst.evmap.api.goingelectric.GEChargepoint
 import net.vonforst.evmap.api.openchargemap.OCMConnectionType
@@ -34,7 +35,7 @@ import net.vonforst.evmap.model.*
         OCMOperator::class
     ], version = 19
 )
-@TypeConverters(Converters::class)
+@TypeConverters(Converters::class, GeometryConverters::class)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun chargeLocationsDao(): ChargeLocationsDao
     abstract fun favoritesDao(): FavoritesDao
