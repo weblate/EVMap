@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="donations_info" formatted="false">Us ha semblat útil l\'EVMap? Doneu suport al seu desenvolupament enviant un donatiu al desenvolupador.\n\nGoogle es queda un 15% en cada donatiu.</string>
+    <string name="data_sources_hint">A la configuració també podeu canviar entre Google Maps i OpenStreetMap per a les dades del mapa.</string>
+</resources>

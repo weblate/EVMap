@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="donate_paypal">Fes un donatiu amb PayPal</string>
+    <string name="data_sources_hint">Les dades cartogràfiques de l\'aplicació són proporcionades per OpenStreetMap.</string>
+    <string name="donations_info" formatted="false">Us ha semblat útil l\'EVMap? Doneu-nos suport per al seu desenvolupament enviant un donatiu al desenvolupador.</string>
+</resources>
