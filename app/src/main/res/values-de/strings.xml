@@ -93,7 +93,7 @@
     <string name="menu_manage_filter_profiles">Filterprofile verwalten</string>
     <string name="go_to_chargeprice">Preisvergleich</string>
     <string name="fault_report">Störungsmeldung</string>
-    <string name="fault_report_date">Störungsmeldung (Letztes Update: %s)</string>
+    <string name="fault_report_date">Störungsmeldung (letzte Aktualisierung: %s)</string>
     <string name="filter_networks">Verbünde</string>
     <string name="filter_operators">Betreiber</string>
     <string name="filter_chargecards">Ladetarife</string>
@@ -261,7 +261,7 @@
     <string name="help">Hilfe</string>
     <string name="settings_android_auto">Android Auto</string>
     <string name="pref_chargeprice_allow_unbalanced_load">Schieflast erlauben</string>
-    <string name="pref_chargeprice_allow_unbalanced_load_summary">Einphasiges Laden mit mehr als 4.5 kW erlauben</string>
+    <string name="pref_chargeprice_allow_unbalanced_load_summary">Einphasiges Laden mit mehr als 4,5 kW erlauben</string>
     <string name="pref_map_rotate_gestures_enabled">Kartenrotation</string>
     <string name="pref_map_rotate_gestures_on">Karte mit zwei Fingern rotieren</string>
     <string name="pref_map_rotate_gestures_off">Karte immer nach Norden ausrichten</string>
@@ -301,7 +301,7 @@
     <string name="compass">Kompass</string>
     <string name="charger_website">Website</string>
     <string name="location_status">Standortdienste-Status</string>
-    <string name="pref_tesla_account">Tesla-Account</string>
+    <string name="pref_tesla_account">Tesla-Konto</string>
     <string name="pref_tesla_account_enabled">Angemeldet als %s</string>
     <string name="pref_tesla_account_disabled">Anmelden, um Echtzeitdaten für Tesla Supercharger zu sehen. Kein Tesla-Fahrzeug notwendig</string>
     <string name="logging_in">Anmelden…</string>
@@ -310,7 +310,7 @@
     <string name="login">Anmelden</string>
     <string name="login_error">Anmeldung fehlgeschlagen</string>
     <string name="tesla_pricing_owners">Nur Tesla-Fahrzeuge:</string>
-    <string name="tesla_pricing_members">Tesla-Fahrzeuge &amp; Mitglieder:</string>
+    <string name="tesla_pricing_members">Tesla-Fahrzeuge &amp; -Mitglieder:</string>
     <string name="tesla_pricing_others">Andere Kunden:</string>
     <string name="pricing_up_to">bis zu %s</string>
     <string name="tesla_pricing_other_times">Andere Zeiten:</string>
